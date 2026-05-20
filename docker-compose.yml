@@ -1,0 +1,24 @@
+services:
+  db:
+    container_name: accord-postgres
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: accord
+    volumes:
+      - db:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    networks:
+      - db
+    restart: unless-stopped
+
+# If you have more than one container and want them to communicate through
+# same network
+networks:
+  db:
+    driver: bridge
+
+volumes:
+  db:
