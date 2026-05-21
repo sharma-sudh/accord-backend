@@ -1,4 +1,37 @@
 ### GET request to example server
 GET http://localhost:8080
 
-###
+### GET all tasks
+GET http://localhost:8080/api/v1/tasks
+
+### POST create task
+POST http://localhost:8080/api/v1/tasks
+Content-Type: application/json
+
+{
+  "title": "Study DSA",
+  "description": "Complete Striver sheet",
+  "value": 50.00,
+  "type": "ONE_OFF",
+  "dueDate": "2026-05-25",
+  "isCompleted": false
+}
+
+### DELETE task by id
+DELETE http://localhost:8080/api/v1/tasks/7134d219-b81f-45e4-8dd2-e396aa4c0dd0
+
+### PATCH
+PATCH http://localhost:8080/api/v1/tasks/7134d219-b81f-45e4-8dd2-e396aa4c0dd0/complete
+
+### POST create payment transaction
+POST http://localhost:8080/api/v1/transactions
+Content-Type: application/json
+
+{
+  "amount": 100.00,
+  "type": "PAYMENT_MADE",
+  "clientTimestamp": "2026-05-20T06:00:00"
+}
+
+### GET balance
+GET http://localhost:8080/api/v1/transactions/balance/{paste-user-uuid}
