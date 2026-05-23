@@ -2,6 +2,7 @@ package com.sudh.accord.controller;
 
 import com.sudh.accord.entity.Task;
 import com.sudh.accord.service.TaskService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,8 +18,8 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<Task> getAllTasks(){
-        return taskService.getAllTasks();
+    public List<Task> getAllTasks(@AuthenticationPrincipal String userId){
+        return taskService.getAllTasks(UUID.fromString(userId));
     }
 
     @PostMapping

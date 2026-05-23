@@ -21,8 +21,8 @@ public class TaskService {
         this.transactionService = transactionService;
     }
 
-    public List<Task> getAllTasks(){
-        return taskRepository.findAll();
+    public List<Task> getAllTasks(UUID id){
+        return taskRepository.findAllByUserId(id);
     }
 
     public Task createTask(Task task){

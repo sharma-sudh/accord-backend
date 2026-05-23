@@ -4,7 +4,8 @@ import com.sudh.accord.entity.User;
 import com.sudh.accord.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.math.BigDecimal;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -14,7 +15,9 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public List<User> getUsers(){
-        return userRepository.findAll();
+    public User updateBudget(UUID userId, BigDecimal newBudget){
+        User user = userRepository.findById(userId).orElseThrow();
+        user.setMonthlyBudget(newBudget);
+        return userRepository.save(user);
     }
 }
