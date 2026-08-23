@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -99,6 +100,13 @@ public class AuthService {
     // legitimate client have now tried to use it — we can't tell which is
     // which, so every outstanding session for the user is revoked, forcing a
     // fresh login everywhere.
+    // @Transactional keeps the Hibernate session open for the whole method —
+    // needed because existing.getUser() (RefreshToken.user is FetchType.LAZY)
+    // isn't actually loaded until issueTokens() calls user.getEmail(). Without
+    // an explicit transaction here, that lazy load happens after the session
+    // from findByTokenHash() has already closed (open-in-view is disabled),
+    // throwing LazyInitializationException instead of returning a token.
+    @Transactional
     public AuthResponse refresh(RefreshRequest req) {
         String hash = jwtUtil.hashRefreshToken(req.refreshToken());
 

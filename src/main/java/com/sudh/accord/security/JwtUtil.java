@@ -19,7 +19,7 @@ import java.util.UUID;
 
 @Component
 public class JwtUtil {
-    private static final long ACCESS_TOKEN_TTL_MS = 1000L * 60 * 30;          // 30 min
+    private static final long ACCESS_TOKEN_TTL_MS = 1000L * 60;          // 30 min
     private static final int REFRESH_TOKEN_BYTES = 64;                        // 512-bit opaque token
     public static final int REFRESH_TOKEN_TTL_DAYS = 30;
 
