@@ -4,7 +4,9 @@ import com.sudh.accord.dto.AuthResponse;
 import com.sudh.accord.dto.GoogleAuthRequest;
 import com.sudh.accord.dto.LoginRequest;
 import com.sudh.accord.dto.RegisterRequest;
+import com.sudh.accord.entity.RefreshToken;
 import com.sudh.accord.entity.User;
+import com.sudh.accord.repository.RefreshTokenRepository;
 import com.sudh.accord.repository.UserRepository;
 import com.sudh.accord.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,14 +22,16 @@ import java.util.Optional;
 @Service
 public class AuthService {
     private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${google.client-id}")
     private String googleClientId;
 
-    public AuthService(UserRepository userRepository, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
+    public AuthService(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
     }
@@ -42,8 +46,7 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(req.password()));
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail());
-        return new AuthResponse(token, user.getId(), user.getEmail(), false);
+        return issueTokens(user, false);
     }
 
     public AuthResponse login(LoginRequest req) {
@@ -54,8 +57,7 @@ public class AuthService {
                 !passwordEncoder.matches(req.password(), user.getPasswordHash()))
             throw new RuntimeException("Invalid credentials");
 
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail());
-        return new AuthResponse(token, user.getId(), user.getEmail(), false);
+        return issueTokens(user, false);
     }
 
     public AuthResponse googleAuth(GoogleAuthRequest req) {
@@ -81,8 +83,26 @@ public class AuthService {
         user.setGoogleId(googleId);   // link even if they registered via email earlier
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail());
-        return new AuthResponse(token, user.getId(), user.getEmail(), isNewUser);
+        return issueTokens(user, isNewUser);
+    }
+
+    // Issues an access token + a fresh refresh token, persisting the refresh
+    // token's hash (never the raw value) so it can be looked up and revoked later.
+    private AuthResponse issueTokens(User user, boolean isNewUser) {
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail());
+        String rawRefreshToken = jwtUtil.generateRefreshToken();
+
+        RefreshToken refreshToken = new RefreshToken(
+                null,
+                jwtUtil.hashRefreshToken(rawRefreshToken),
+                user,
+                jwtUtil.getRefreshTokenExpiry(),
+                false,
+                null
+        );
+        refreshTokenRepository.save(refreshToken);
+
+        return new AuthResponse(accessToken, rawRefreshToken, user.getId(), user.getEmail(), isNewUser);
     }
 
     private Map<String, Object> verifyGoogleToken(String idToken) {
