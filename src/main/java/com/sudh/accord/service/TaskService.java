@@ -8,6 +8,7 @@ import com.sudh.accord.enums.TaskType;
 import com.sudh.accord.enums.TransactionType;
 import com.sudh.accord.repository.TaskRepository;
 import com.sudh.accord.repository.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -38,12 +39,19 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
-    public void deleteTask(UUID id) {
+    public void deleteTask(UUID id, UUID userId) {
+        Task task = taskRepository.findById(id).orElseThrow();
+        if (!task.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("Not authorized to delete this task");
+        }
         taskRepository.deleteById(id);
     }
 
-    public Task completeTask(UUID id) {
+    public Task completeTask(UUID id, UUID userId) {
         Task task = taskRepository.findById(id).orElseThrow();
+        if (!task.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("Not authorized to complete this task");
+        }
         task.setCompleted(true);
         Transaction transaction = new Transaction(
                 null,

@@ -34,13 +34,13 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteTask(@PathVariable UUID id) {
-        taskService.deleteTask(id);
+    public void deleteTask(@PathVariable UUID id, @AuthenticationPrincipal String userId) {
+        taskService.deleteTask(id, UUID.fromString(userId));
     }
 
     @PatchMapping("/{id}/complete")
-    public TaskResponse completeTask(@PathVariable UUID id) {
-        return toResponse(taskService.completeTask(id));
+    public TaskResponse completeTask(@PathVariable UUID id, @AuthenticationPrincipal String userId) {
+        return toResponse(taskService.completeTask(id, UUID.fromString(userId)));
     }
 
     // ── mapping ──────────────────────────────────────────────────────────────
