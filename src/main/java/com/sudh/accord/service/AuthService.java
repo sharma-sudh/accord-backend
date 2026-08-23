@@ -15,6 +15,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -24,7 +25,6 @@ public class AuthService {
 
     @Value("${google.client-id}")
     private String googleClientId;
-
 
     public AuthService(UserRepository userRepository, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -43,7 +43,7 @@ public class AuthService {
         userRepository.save(user);
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail());
-        return new AuthResponse(token, user.getId(), user.getEmail());
+        return new AuthResponse(token, user.getId(), user.getEmail(), false);
     }
 
     public AuthResponse login(LoginRequest req) {
@@ -55,7 +55,7 @@ public class AuthService {
             throw new RuntimeException("Invalid credentials");
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail());
-        return new AuthResponse(token, user.getId(), user.getEmail());
+        return new AuthResponse(token, user.getId(), user.getEmail(), false);
     }
 
     public AuthResponse googleAuth(GoogleAuthRequest req) {
@@ -65,25 +65,27 @@ public class AuthService {
         String email    = (String) googleUser.get("email");
         String name     = (String) googleUser.get("name");
 
-        // find by googleId first, then email (handles linking accounts)
-        User user = userRepository.findByGoogleId(googleId)
-                .orElseGet(() -> userRepository.findByEmail(email)
-                        .orElseGet(() -> {
-                            User newUser = new User();
-                            newUser.setEmail(email);
-                            newUser.setName(name);
-                            return newUser;
-                        }));
+        // find by googleId first, then fall back to email (handles account linking)
+        Optional<User> existing = userRepository.findByGoogleId(googleId)
+                .or(() -> userRepository.findByEmail(email));
+
+        boolean isNewUser = existing.isEmpty();
+
+        User user = existing.orElseGet(() -> {
+            User newUser = new User();
+            newUser.setEmail(email);
+            newUser.setName(name);
+            return newUser;
+        });
 
         user.setGoogleId(googleId);   // link even if they registered via email earlier
         userRepository.save(user);
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail());
-        return new AuthResponse(token, user.getId(), user.getEmail());
+        return new AuthResponse(token, user.getId(), user.getEmail(), isNewUser);
     }
 
     private Map<String, Object> verifyGoogleToken(String idToken) {
-        // calls Google's tokeninfo endpoint — simple, no extra deps
         RestTemplate restTemplate = new RestTemplate();
         String url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken;
 
@@ -91,7 +93,6 @@ public class AuthService {
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             Map<String, Object> body = response.getBody();
 
-            // IMPORTANT: verify the token was meant for your app
             String aud = (String) body.get("aud");
             if (!googleClientId.equals(aud))
                 throw new RuntimeException("Token audience mismatch");
