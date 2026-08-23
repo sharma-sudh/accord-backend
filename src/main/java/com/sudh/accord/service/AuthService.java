@@ -3,6 +3,7 @@ package com.sudh.accord.service;
 import com.sudh.accord.dto.AuthResponse;
 import com.sudh.accord.dto.GoogleAuthRequest;
 import com.sudh.accord.dto.LoginRequest;
+import com.sudh.accord.dto.RefreshRequest;
 import com.sudh.accord.dto.RegisterRequest;
 import com.sudh.accord.entity.RefreshToken;
 import com.sudh.accord.entity.User;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -84,6 +86,30 @@ public class AuthService {
         userRepository.save(user);
 
         return issueTokens(user, isNewUser);
+    }
+
+    // Rotates the refresh token: validates the presented one, revokes it, and
+    // issues a brand-new access + refresh token pair. Rotation means a stolen
+    // refresh token is only usable once before the legitimate client's next
+    // refresh invalidates it (and this is also where reuse detection could
+    // later hook in — a revoked token being presented again is a strong signal
+    // the token was compromised).
+    public AuthResponse refresh(RefreshRequest req) {
+        String hash = jwtUtil.hashRefreshToken(req.refreshToken());
+
+        RefreshToken existing = refreshTokenRepository.findByTokenHash(hash)
+                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+
+        if (existing.isRevoked())
+            throw new RuntimeException("Refresh token has been revoked");
+
+        if (existing.getExpiresAt().isBefore(LocalDateTime.now()))
+            throw new RuntimeException("Refresh token has expired");
+
+        existing.setRevoked(true);
+        refreshTokenRepository.save(existing);
+
+        return issueTokens(existing.getUser(), false);
     }
 
     // Issues an access token + a fresh refresh token, persisting the refresh

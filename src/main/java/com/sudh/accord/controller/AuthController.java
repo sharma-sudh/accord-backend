@@ -3,6 +3,7 @@ package com.sudh.accord.controller;
 import com.sudh.accord.dto.AuthResponse;
 import com.sudh.accord.dto.GoogleAuthRequest;
 import com.sudh.accord.dto.LoginRequest;
+import com.sudh.accord.dto.RefreshRequest;
 import com.sudh.accord.dto.RegisterRequest;
 import com.sudh.accord.service.AuthService;
 import org.springframework.http.ResponseEntity;
@@ -33,5 +34,10 @@ public class AuthController {
     @PostMapping("/google")
     public ResponseEntity<AuthResponse> google(@RequestBody GoogleAuthRequest googleAuthRequest){
         return ResponseEntity.ok(authService.googleAuth(googleAuthRequest));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@RequestBody RefreshRequest refreshRequest){
+        return ResponseEntity.ok(authService.refresh(refreshRequest));
     }
 }
