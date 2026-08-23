@@ -16,7 +16,10 @@ public class TransactionService {
         this.transactionRepository = transactionRepository;
     }
 
-    public Transaction createTransaction(Transaction transaction){
+    // Package-private: only service-layer code (e.g. TaskService.completeTask,
+    // the future payment-deduction flow) may create transactions. No controller
+    // should call this directly with a client-supplied Transaction.
+    Transaction createTransaction(Transaction transaction){
         return transactionRepository.save(transaction);
     }
 
