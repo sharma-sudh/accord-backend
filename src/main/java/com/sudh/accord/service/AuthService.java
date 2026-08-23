@@ -18,6 +18,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -91,17 +92,23 @@ public class AuthService {
     // Rotates the refresh token: validates the presented one, revokes it, and
     // issues a brand-new access + refresh token pair. Rotation means a stolen
     // refresh token is only usable once before the legitimate client's next
-    // refresh invalidates it (and this is also where reuse detection could
-    // later hook in — a revoked token being presented again is a strong signal
-    // the token was compromised).
+    // refresh invalidates it.
+    //
+    // Reuse detection: if a token that's already revoked gets presented again,
+    // that's a strong signal it was stolen and both the attacker and the
+    // legitimate client have now tried to use it — we can't tell which is
+    // which, so every outstanding session for the user is revoked, forcing a
+    // fresh login everywhere.
     public AuthResponse refresh(RefreshRequest req) {
         String hash = jwtUtil.hashRefreshToken(req.refreshToken());
 
         RefreshToken existing = refreshTokenRepository.findByTokenHash(hash)
                 .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
 
-        if (existing.isRevoked())
-            throw new RuntimeException("Refresh token has been revoked");
+        if (existing.isRevoked()) {
+            revokeAllTokensForUser(existing.getUser());
+            throw new RuntimeException("Refresh token reuse detected — all sessions revoked");
+        }
 
         if (existing.getExpiresAt().isBefore(LocalDateTime.now()))
             throw new RuntimeException("Refresh token has expired");
@@ -110,6 +117,12 @@ public class AuthService {
         refreshTokenRepository.save(existing);
 
         return issueTokens(existing.getUser(), false);
+    }
+
+    private void revokeAllTokensForUser(User user) {
+        List<RefreshToken> active = refreshTokenRepository.findAllByUserAndRevokedFalse(user);
+        active.forEach(t -> t.setRevoked(true));
+        refreshTokenRepository.saveAll(active);
     }
 
     // Issues an access token + a fresh refresh token, persisting the refresh
