@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -30,6 +31,8 @@ public class Task {
 
     private LocalDate dueDate;
 
+    private LocalDateTime lastCompletedAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")   // FK column in books table
     private User user;
@@ -44,6 +47,7 @@ public class Task {
                 TaskType type,
                 boolean isCompleted,
                 LocalDate dueDate,
+                LocalDateTime lastCompletedAt,
                 User user) {
         this.id = id;
         this.title = title;
@@ -52,6 +56,7 @@ public class Task {
         this.type = type;
         this.isCompleted = isCompleted;
         this.dueDate = dueDate;
+        this.lastCompletedAt = lastCompletedAt;
         this.user = user;
     }
 
@@ -111,6 +116,14 @@ public class Task {
         this.dueDate = dueDate;
     }
 
+    public LocalDateTime getLastCompletedAt() {
+        return lastCompletedAt;
+    }
+
+    public void setLastCompletedAt(LocalDateTime lastCompletedAt) {
+        this.lastCompletedAt = lastCompletedAt;
+    }
+
     public User getUser() {
         return user;
     }
@@ -123,11 +136,11 @@ public class Task {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Task task = (Task) o;
-        return Objects.equals(id, task.id) && Objects.equals(title, task.title) && Objects.equals(description, task.description) && Objects.equals(value, task.value) && type == task.type && Objects.equals(isCompleted, task.isCompleted) && Objects.equals(dueDate, task.dueDate) && Objects.equals(user, task.user);
+        return Objects.equals(id, task.id) && Objects.equals(title, task.title) && Objects.equals(description, task.description) && Objects.equals(value, task.value) && type == task.type && Objects.equals(isCompleted, task.isCompleted) && Objects.equals(dueDate, task.dueDate) && Objects.equals(lastCompletedAt, task.lastCompletedAt) && Objects.equals(user, task.user);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, title, description, value, type, isCompleted, dueDate, user);
+        return Objects.hash(id, title, description, value, type, isCompleted, dueDate, lastCompletedAt, user);
     }
 }

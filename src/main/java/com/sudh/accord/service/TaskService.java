@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.WeekFields;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,7 +31,33 @@ public class TaskService {
     }
 
     public List<Task> getAllTasks(UUID userId) {
-        return taskRepository.findAllByUserId(userId);
+        return taskRepository.findAllByUserId(userId).stream()
+                .filter(task -> task.getType() == TaskType.ONE_OFF || !isCompletedThisCycle(task))
+                .toList();
+    }
+
+    /**
+     * Whether a recurring task has already been completed within its current cycle
+     * (today for DAILY, this ISO week for WEEKLY, this calendar month for MONTHLY).
+     * Not meaningful for ONE_OFF tasks, which rely on isCompleted directly.
+     */
+    public static boolean isCompletedThisCycle(Task task) {
+        LocalDateTime lastCompletedAt = task.getLastCompletedAt();
+        if (lastCompletedAt == null) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        return switch (task.getType()) {
+            case DAILY -> lastCompletedAt.toLocalDate().isEqual(now.toLocalDate());
+            case WEEKLY -> {
+                WeekFields weekFields = WeekFields.ISO;
+                yield lastCompletedAt.get(weekFields.weekBasedYear()) == now.get(weekFields.weekBasedYear())
+                        && lastCompletedAt.get(weekFields.weekOfWeekBasedYear()) == now.get(weekFields.weekOfWeekBasedYear());
+            }
+            case MONTHLY -> lastCompletedAt.getYear() == now.getYear()
+                    && lastCompletedAt.getMonthValue() == now.getMonthValue();
+            case ONE_OFF -> false;
+        };
     }
 
     public Task createTask(Task task, UUID userId){
@@ -53,6 +80,7 @@ public class TaskService {
             throw new AccessDeniedException("Not authorized to complete this task");
         }
         task.setCompleted(true);
+        task.setLastCompletedAt(LocalDateTime.now());
         Transaction transaction = new Transaction(
                 null,
                 task.getValue(),

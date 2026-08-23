@@ -13,5 +13,6 @@ public record TaskResponse(
         TaskType type,
         boolean isCompleted,
         String dueDate,
+        String lastCompletedAt,
         UUID userId
 ) {}

@@ -3,6 +3,7 @@ package com.sudh.accord.controller;
 import com.sudh.accord.dto.CreateTaskRequest;
 import com.sudh.accord.dto.TaskResponse;
 import com.sudh.accord.entity.Task;
+import com.sudh.accord.enums.TaskType;
 import com.sudh.accord.service.TaskService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -46,14 +47,20 @@ public class TaskController {
     // ── mapping ──────────────────────────────────────────────────────────────
 
     private TaskResponse toResponse(Task task) {
+        // For recurring tasks, isCompleted reflects the current cycle, not the raw
+        // (possibly stale, from a prior cycle) DB flag.
+        boolean effectiveCompleted = task.getType() == TaskType.ONE_OFF
+                ? task.getCompleted()
+                : TaskService.isCompletedThisCycle(task);
         return new TaskResponse(
                 task.getId(),
                 task.getTitle(),
                 task.getDescription(),
                 task.getValue(),
                 task.getType(),
-                task.getCompleted(),
+                effectiveCompleted,
                 task.getDueDate() != null ? task.getDueDate().toString() : null,
+                task.getLastCompletedAt() != null ? task.getLastCompletedAt().toString() : null,
                 task.getUser().getId()
         );
     }
