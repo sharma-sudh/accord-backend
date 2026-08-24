@@ -2,6 +2,7 @@ package com.sudh.accord.entity;
 
 import com.sudh.accord.enums.TaskType;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -32,6 +33,15 @@ public class Task {
     private LocalDate dueDate;
 
     private LocalDateTime lastCompletedAt;
+
+    // Added for analytics (0.2.0): completionRate needs "tasks created in range".
+    // Heads up: ddl-auto=update just ALTERs the table to add a nullable column —
+    // it does NOT backfill existing rows, so any task created before this change
+    // will have createdAt = null. AnalyticsService treats null as "not in range"
+    // for the denominator, which is correct behavior, just flagging it since it's
+    // not a normal @CreationTimestamp guarantee for old data.
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")   // FK column in books table
@@ -132,15 +142,23 @@ public class Task {
         this.user = user;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Task task = (Task) o;
-        return Objects.equals(id, task.id) && Objects.equals(title, task.title) && Objects.equals(description, task.description) && Objects.equals(value, task.value) && type == task.type && Objects.equals(isCompleted, task.isCompleted) && Objects.equals(dueDate, task.dueDate) && Objects.equals(lastCompletedAt, task.lastCompletedAt) && Objects.equals(user, task.user);
+        return Objects.equals(id, task.id) && Objects.equals(title, task.title) && Objects.equals(description, task.description) && Objects.equals(value, task.value) && type == task.type && Objects.equals(isCompleted, task.isCompleted) && Objects.equals(dueDate, task.dueDate) && Objects.equals(lastCompletedAt, task.lastCompletedAt) && Objects.equals(createdAt, task.createdAt) && Objects.equals(user, task.user);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, title, description, value, type, isCompleted, dueDate, lastCompletedAt, user);
+        return Objects.hash(id, title, description, value, type, isCompleted, dueDate, lastCompletedAt, createdAt, user);
     }
 }
