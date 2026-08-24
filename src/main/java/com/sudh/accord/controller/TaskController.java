@@ -8,6 +8,7 @@ import com.sudh.accord.service.TaskService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,8 +31,19 @@ public class TaskController {
     }
 
     @PostMapping
-    public Task createTask(@RequestBody Task task, @AuthenticationPrincipal String userId){
-        return taskService.createTask(task, UUID.fromString(userId));
+    public TaskResponse createTask(@RequestBody CreateTaskRequest request, @AuthenticationPrincipal String userId) {
+        Task task = new Task(
+                null,
+                request.title(),
+                request.description(),
+                request.value(),
+                TaskType.valueOf(request.type()),
+                false,
+                request.dueDate() != null ? LocalDate.parse(request.dueDate()) : null,
+                null,
+                null
+        );
+        return toResponse(taskService.createTask(task, UUID.fromString(userId)));
     }
 
     @DeleteMapping("/{id}")
