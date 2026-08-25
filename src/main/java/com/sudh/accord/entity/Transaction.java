@@ -31,6 +31,8 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     private TransactionType type;
 
+    private String merchantName;
+
     private LocalDateTime clientTimestamp;
 
     @CreationTimestamp
@@ -46,11 +48,23 @@ public class Transaction {
                        TransactionType type,
                        LocalDateTime clientTimestamp,
                        LocalDateTime createdAt) {
+        this(id, amount, user, task, type, null, clientTimestamp, createdAt);
+    }
+
+    public Transaction(UUID id,
+                       BigDecimal amount,
+                       User user,
+                       Task task,
+                       TransactionType type,
+                       String merchantName,
+                       LocalDateTime clientTimestamp,
+                       LocalDateTime createdAt) {
         this.id = id;
         this.amount = amount;
         this.user = user;
         this.task = task;
         this.type = type;
+        this.merchantName = merchantName;
         this.clientTimestamp = clientTimestamp;
         this.createdAt = createdAt;
     }
@@ -95,6 +109,14 @@ public class Transaction {
         this.type = type;
     }
 
+    public String getMerchantName() {
+        return merchantName;
+    }
+
+    public void setMerchantName(String merchantName) {
+        this.merchantName = merchantName;
+    }
+
     public LocalDateTime getClientTimestamp() {
         return clientTimestamp;
     }
@@ -115,11 +137,11 @@ public class Transaction {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Transaction that = (Transaction) o;
-        return Objects.equals(id, that.id) && Objects.equals(amount, that.amount) && Objects.equals(user, that.user) && Objects.equals(task, that.task) && type == that.type && Objects.equals(clientTimestamp, that.clientTimestamp) && Objects.equals(createdAt, that.createdAt);
+        return Objects.equals(id, that.id) && Objects.equals(amount, that.amount) && Objects.equals(user, that.user) && Objects.equals(task, that.task) && type == that.type && Objects.equals(merchantName, that.merchantName) && Objects.equals(clientTimestamp, that.clientTimestamp) && Objects.equals(createdAt, that.createdAt);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, amount, user, task, type, clientTimestamp, createdAt);
+        return Objects.hash(id, amount, user, task, type, merchantName, clientTimestamp, createdAt);
     }
 }
