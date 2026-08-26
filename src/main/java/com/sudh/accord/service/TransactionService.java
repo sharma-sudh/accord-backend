@@ -63,4 +63,35 @@ public class TransactionService {
 
         return totalEarned.subtract(totalSpent);
     }
+
+    // "Wallet low" is defined relative to the user's own monthlyBudget rather
+    // than an absolute rupee amount, since that's the only per-user scale we
+    // have. Users without a configured (positive) budget are excluded rather
+    // than guessed at.
+    private static final BigDecimal WALLET_LOW_THRESHOLD_RATIO = new BigDecimal("0.20");
+    private static final long NO_RECENT_TASK_DAYS = 3;
+
+    public boolean isWalletUnderPressure(UUID userId) {
+        User user = userRepository.findById(userId).orElseThrow();
+
+        BigDecimal monthlyBudget = user.getMonthlyBudget();
+        if (monthlyBudget == null || monthlyBudget.signum() <= 0) {
+            return false;
+        }
+
+        BigDecimal balance = getBudget(userId);
+        BigDecimal lowThreshold = monthlyBudget.multiply(WALLET_LOW_THRESHOLD_RATIO);
+        boolean walletLow = balance.compareTo(lowThreshold) < 0;
+        if (!walletLow) {
+            return false;
+        }
+
+        LocalDateTime lastTaskCompletedAt =
+                transactionRepository.findLatestTransactionDate(userId, TransactionType.TASK_COMPLETED);
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(NO_RECENT_TASK_DAYS);
+
+        // Never having completed a task also counts as "no task logged" —
+        // this isn't just for users already in a pressure spiral.
+        return lastTaskCompletedAt == null || lastTaskCompletedAt.isBefore(cutoff);
+    }
 }

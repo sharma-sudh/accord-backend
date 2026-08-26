@@ -24,4 +24,10 @@ public interface TransactionRepository  extends JpaRepository<Transaction, UUID>
     // rather than clientTimestamp since the ledger is server-authoritative.
     List<Transaction> findAllByUserIdAndCreatedAtBetweenOrderByCreatedAtAsc(
             UUID userId, LocalDateTime start, LocalDateTime end);
+
+    // Backs the wallet-pressure check's "no task logged in 3+ days" leg. Null
+    // means the user has never completed a task at all, which the service
+    // layer treats as satisfying that condition too.
+    @Query("select max(t.createdAt) from Transaction t where t.user.id = :userId and t.type = :type")
+    LocalDateTime findLatestTransactionDate(@Param("userId") UUID userId, @Param("type") TransactionType type);
 }

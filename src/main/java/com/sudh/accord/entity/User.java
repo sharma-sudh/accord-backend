@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
@@ -29,6 +30,14 @@ public class User {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    // Streak tracking (V1): reuses User instead of a separate DailyCheckIn entity.
+    // lastCheckInDate is the calendar date (Asia/Kolkata, per hibernate.jdbc.time_zone)
+    // of the most recent successful /streak/checkin call; null until the user's first check-in.
+    private LocalDate lastCheckInDate;
+
+    @Column(nullable = false)
+    private int currentStreak = 0;
+
     public User() {
     }
 
@@ -38,7 +47,9 @@ public class User {
                 BigDecimal monthlyBudget,
                 String passwordHash,
                 String googleId,
-                LocalDateTime createdAt) {
+                LocalDateTime createdAt,
+                LocalDate lastCheckInDate,
+                int currentStreak) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -46,6 +57,8 @@ public class User {
         this.passwordHash = passwordHash;
         this.googleId = googleId;
         this.createdAt = createdAt;
+        this.lastCheckInDate = lastCheckInDate;
+        this.currentStreak = currentStreak;
     }
 
     public UUID getId() {
@@ -104,15 +117,31 @@ public class User {
         this.createdAt = createdAt;
     }
 
+    public LocalDate getLastCheckInDate() {
+        return lastCheckInDate;
+    }
+
+    public void setLastCheckInDate(LocalDate lastCheckInDate) {
+        this.lastCheckInDate = lastCheckInDate;
+    }
+
+    public int getCurrentStreak() {
+        return currentStreak;
+    }
+
+    public void setCurrentStreak(int currentStreak) {
+        this.currentStreak = currentStreak;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         User user = (User) o;
-        return Objects.equals(id, user.id) && Objects.equals(name, user.name) && Objects.equals(email, user.email) && Objects.equals(monthlyBudget, user.monthlyBudget) && Objects.equals(passwordHash, user.passwordHash) && Objects.equals(googleId, user.googleId) && Objects.equals(createdAt, user.createdAt);
+        return currentStreak == user.currentStreak && Objects.equals(id, user.id) && Objects.equals(name, user.name) && Objects.equals(email, user.email) && Objects.equals(monthlyBudget, user.monthlyBudget) && Objects.equals(passwordHash, user.passwordHash) && Objects.equals(googleId, user.googleId) && Objects.equals(createdAt, user.createdAt) && Objects.equals(lastCheckInDate, user.lastCheckInDate);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, email, monthlyBudget, passwordHash, googleId, createdAt);
+        return Objects.hash(id, name, email, monthlyBudget, passwordHash, googleId, createdAt, lastCheckInDate, currentStreak);
     }
 }
