@@ -8,7 +8,11 @@ import com.sudh.accord.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -93,5 +97,56 @@ public class TransactionService {
         // Never having completed a task also counts as "no task logged" —
         // this isn't just for users already in a pressure spiral.
         return lastTaskCompletedAt == null || lastTaskCompletedAt.isBefore(cutoff);
+    }
+
+    // wallet_low_days input for the Sunday narrative: how many of the 7 days
+    // in [startInclusive, endExclusive) ended with balance below the same
+    // 20%-of-monthlyBudget threshold isWalletUnderPressure uses. Users with
+    // no configured (positive) budget can't have a threshold, so they score 0
+    // rather than being guessed at — same convention as isWalletUnderPressure.
+    //
+    // There's no daily balance snapshot table, so this reconstructs each
+    // day's end-of-day balance by seeding a running total from everything
+    // before the range (getSumByTypeBefore) and then walking forward one day
+    // at a time, applying that day's net transactions in order.
+    public int countWalletLowDaysInRange(UUID userId, LocalDate startInclusive, LocalDate endExclusive) {
+        User user = userRepository.findById(userId).orElseThrow();
+
+        BigDecimal monthlyBudget = user.getMonthlyBudget();
+        if (monthlyBudget == null || monthlyBudget.signum() <= 0) {
+            return 0;
+        }
+        BigDecimal lowThreshold = monthlyBudget.multiply(WALLET_LOW_THRESHOLD_RATIO);
+
+        LocalDateTime rangeStart = startInclusive.atStartOfDay();
+        LocalDateTime rangeEnd = endExclusive.atStartOfDay();
+
+        BigDecimal earnedBefore = transactionRepository.getSumByTypeBefore(userId, TransactionType.TASK_COMPLETED, rangeStart);
+        BigDecimal spentBefore = transactionRepository.getSumByTypeBefore(userId, TransactionType.PAYMENT_MADE, rangeStart);
+        BigDecimal runningBalance = nz(earnedBefore).subtract(nz(spentBefore));
+
+        List<Transaction> rangeTransactions =
+                transactionRepository.findAllByUserIdAndCreatedAtBetweenOrderByCreatedAtAsc(userId, rangeStart, rangeEnd);
+
+        Map<LocalDate, BigDecimal> netByDay = new LinkedHashMap<>();
+        for (Transaction t : rangeTransactions) {
+            BigDecimal signedAmount = t.getType() == TransactionType.TASK_COMPLETED
+                    ? t.getAmount()
+                    : t.getAmount().negate();
+            netByDay.merge(t.getCreatedAt().toLocalDate(), signedAmount, BigDecimal::add);
+        }
+
+        int lowDays = 0;
+        for (LocalDate day = startInclusive; day.isBefore(endExclusive); day = day.plusDays(1)) {
+            runningBalance = runningBalance.add(netByDay.getOrDefault(day, BigDecimal.ZERO));
+            if (runningBalance.compareTo(lowThreshold) < 0) {
+                lowDays++;
+            }
+        }
+        return lowDays;
+    }
+
+    private static BigDecimal nz(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 }

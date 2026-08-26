@@ -30,4 +30,17 @@ public interface TransactionRepository  extends JpaRepository<Transaction, UUID>
     // layer treats as satisfying that condition too.
     @Query("select max(t.createdAt) from Transaction t where t.user.id = :userId and t.type = :type")
     LocalDateTime findLatestTransactionDate(@Param("userId") UUID userId, @Param("type") TransactionType type);
+
+    // Starting balance for TransactionService.countWalletLowDaysInRange: sum
+    // of a type strictly before a cutoff, so a running balance can be seeded
+    // before walking day-by-day through the week itself.
+    @Query("select sum(t.amount) from Transaction t where t.type = :type and t.user.id = :userId and t.createdAt < :before")
+    BigDecimal getSumByTypeBefore(@Param("userId") UUID userId, @Param("type") TransactionType type, @Param("before") LocalDateTime before);
+
+    // Weekly totals for the Sunday narrative's structured input (earned/spent).
+    @Query("select sum(t.amount) from Transaction t where t.type = :type and t.user.id = :userId and t.createdAt >= :start and t.createdAt < :end")
+    BigDecimal getSumByTypeBetween(@Param("userId") UUID userId, @Param("type") TransactionType type, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    // tasks_completed for the Sunday narrative's structured input.
+    long countByUserIdAndTypeAndCreatedAtBetween(UUID userId, TransactionType type, LocalDateTime start, LocalDateTime end);
 }
