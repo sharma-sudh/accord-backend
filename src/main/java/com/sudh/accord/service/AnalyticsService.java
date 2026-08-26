@@ -7,6 +7,7 @@ import com.sudh.accord.enums.AnalyticsRange;
 import com.sudh.accord.enums.TransactionType;
 import com.sudh.accord.repository.TaskRepository;
 import com.sudh.accord.repository.TransactionRepository;
+import com.sudh.accord.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,10 +24,12 @@ public class AnalyticsService {
 
     private final TransactionRepository transactionRepository;
     private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
 
-    public AnalyticsService(TransactionRepository transactionRepository, TaskRepository taskRepository) {
+    public AnalyticsService(TransactionRepository transactionRepository, TaskRepository taskRepository, UserRepository userRepository) {
         this.transactionRepository = transactionRepository;
         this.taskRepository = taskRepository;
+        this.userRepository = userRepository;
     }
 
     // readOnly=true, and required here specifically: spring.jpa.open-in-view=false
@@ -36,6 +39,7 @@ public class AnalyticsService {
     @Transactional(readOnly = true)
     public AnalyticsResponse getAnalytics(UUID userId, AnalyticsRange range) {
         boolean isEmpty = transactionRepository.countByUserId(userId) == 0;
+        int streakDays = userRepository.findById(userId).orElseThrow().getCurrentStreak();
 
         LocalDate today = LocalDate.now();
         LocalDate startDate = today.minusDays(range.getDays() - 1L);
@@ -98,7 +102,7 @@ public class AnalyticsService {
                 totalEarned,
                 totalSpent,
                 completionRate,
-                null, // streakDays — wire up once 0.4.0's streak logic exists
+                streakDays,
                 series,
                 taskBreakdown,
                 isEmpty

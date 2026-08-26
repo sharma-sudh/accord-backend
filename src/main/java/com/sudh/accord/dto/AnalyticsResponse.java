@@ -10,8 +10,10 @@ public record AnalyticsResponse(
         // Ratio 0.0–1.0, not a percentage. 0.0 when no tasks were created in
         // range (avoids a div-by-zero rather than signaling "0% completion").
         double completionRate,
-        // Null until 0.4.0's streak logic exists. Client should hide the stat
-        // card on null rather than render 0/"—" as if it were a real value.
+        // The user's current daily check-in streak (User.currentStreak), as
+        // of when this response was built — not scoped to `range` the way
+        // the other fields are. Integer (not int) kept for API stability;
+        // in practice always populated now that 0.4.0's streak logic exists.
         Integer streakDays,
         // One entry per day in the range, oldest first, zero-filled for days
         // with no activity — safe to feed straight into a chart.
