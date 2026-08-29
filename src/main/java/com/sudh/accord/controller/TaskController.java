@@ -2,6 +2,8 @@ package com.sudh.accord.controller;
 
 import com.sudh.accord.dto.CreateTaskRequest;
 import com.sudh.accord.dto.TaskResponse;
+import com.sudh.accord.dto.TaskSyncRequest;
+import com.sudh.accord.dto.TaskSyncResponse;
 import com.sudh.accord.entity.Task;
 import com.sudh.accord.enums.TaskType;
 import com.sudh.accord.service.TaskService;
@@ -56,6 +58,18 @@ public class TaskController {
         return toResponse(taskService.completeTask(id, UUID.fromString(userId)));
     }
 
+    @PatchMapping("/{id}/sync")
+    public TaskSyncResponse syncTask(@PathVariable UUID id,
+                                     @RequestBody TaskSyncRequest request,
+                                     @AuthenticationPrincipal String userId) {
+        TaskService.TaskSyncResult result = taskService.syncTask(id, UUID.fromString(userId), request);
+        return switch (result.status()) {
+            case APPLIED -> TaskSyncResponse.applied(toResponse(result.task()));
+            case MERGED -> TaskSyncResponse.merged(toResponse(result.task()));
+            case CONFLICT -> TaskSyncResponse.conflict(toResponse(result.task()), result.conflictingFields());
+        };
+    }
+
     // ── mapping ──────────────────────────────────────────────────────────────
 
     private TaskResponse toResponse(Task task) {
@@ -73,7 +87,8 @@ public class TaskController {
                 effectiveCompleted,
                 task.getDueDate() != null ? task.getDueDate().toString() : null,
                 task.getLastCompletedAt() != null ? task.getLastCompletedAt().toString() : null,
-                task.getUser().getId()
+                task.getUser().getId(),
+                task.getVersion()
         );
     }
 }

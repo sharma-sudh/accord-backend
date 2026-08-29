@@ -1,10 +1,11 @@
 package com.sudh.accord.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sudh.accord.dto.NarrativeInput;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -145,7 +146,7 @@ public class GeminiNarrativeClient {
             }
 
             return extractText(response.body());
-        } catch (IOException | InterruptedException e) {
+        } catch (JacksonException | IOException | InterruptedException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
@@ -153,7 +154,7 @@ public class GeminiNarrativeClient {
         }
     }
 
-    private String extractText(String responseBody) throws IOException {
+    private String extractText(String responseBody) {
         JsonNode root = objectMapper.readTree(responseBody);
         JsonNode textNode = root.path("candidates").path(0)
                 .path("content").path("parts").path(0).path("text");

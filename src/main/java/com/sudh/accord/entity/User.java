@@ -35,7 +35,7 @@ public class User {
     // of the most recent successful /streak/checkin call; null until the user's first check-in.
     private LocalDate lastCheckInDate;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "integer default 0")
     private int currentStreak = 0;
 
     public User() {

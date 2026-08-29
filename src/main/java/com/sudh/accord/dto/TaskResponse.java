@@ -14,5 +14,6 @@ public record TaskResponse(
         boolean isCompleted,
         String dueDate,
         String lastCompletedAt,
-        UUID userId
+        UUID userId,
+        int version
 ) {}

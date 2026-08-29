@@ -34,6 +34,18 @@ public class Task {
 
     private LocalDateTime lastCompletedAt;
 
+    // Version vector for offline sync (0.3.0): bumped on every server-side
+    // mutation (via /complete or /sync), compared against the client's
+    // baseVersion to detect concurrent edits.
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int version = 0;
+
+    // Comma-separated field names touched by whichever mutation last bumped
+    // `version`. Lets a later /sync call tell whether an intervening change
+    // overlaps with the incoming one, without needing a full change-log table.
+    // Null/blank means the task has never been mutated since creation.
+    private String lastChangedFields;
+
     // Added for analytics (0.2.0): completionRate needs "tasks created in range".
     // Heads up: ddl-auto=update just ALTERs the table to add a nullable column —
     // it does NOT backfill existing rows, so any task created before this change
@@ -132,6 +144,22 @@ public class Task {
 
     public void setLastCompletedAt(LocalDateTime lastCompletedAt) {
         this.lastCompletedAt = lastCompletedAt;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
+    }
+
+    public String getLastChangedFields() {
+        return lastChangedFields;
+    }
+
+    public void setLastChangedFields(String lastChangedFields) {
+        this.lastChangedFields = lastChangedFields;
     }
 
     public User getUser() {
